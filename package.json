@@ -1,0 +1,141 @@
+{
+  "name": "vscode-follow-language",
+  "displayName": "Follow",
+  "version": "1.0.0",
+  "publisher": "Follow",
+  "description": "Language support for Follow",
+  "icon": "./follow-icon-128.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/follow-lang/vscode-follow-language"
+  },
+  "scripts": {
+    "build": "pnpm --stream -r run build",
+    "esbuild-base": "npm run build && pnpm --stream -r run esbuild-base",
+    "vscode:prepublish": "npm run esbuild-base",
+    "install-ext": "vsce package -o vscode-follow-language.vsix && code --install-extension vscode-follow-language.vsix",
+    "watch": "pnpm --stream -r run watch"
+  },
+  "keywords": [],
+  "author": "Follow",
+  "license": "ISC",
+  "main": "./client/build/extension.js",
+  "categories": [
+    "Programming Languages",
+    "Education"
+  ],
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "activationEvents": [
+    "onLanguage:fol",
+    "onLanguage:markdown"
+  ],
+  "contributes": {
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/style.css"
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "followBlockList",
+          "title": "Follow List",
+          "icon": "./follow-icon-128-2.svg"
+        }
+      ]
+    },
+    "views": {
+      "followBlockList": [
+        {
+          "type": "webview",
+          "id": "followBlockList",
+          "name": "Follow List"
+        }
+      ]
+    },
+    "configurationDefaults": {
+      "editor.semanticTokenColorCustomizations": {
+        "rules": {
+          "keyword": "#569CD6",
+          "operator": "#17B169",
+          "parameter": "#9CDCFE",
+          "string": "#FF8C00",
+          "number": "#F9629F",
+          "type": "#ff5757",
+          "method": "#FF8C00",
+          "function": "#72A0C1",
+          "comment": "#6A9955"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "follow",
+        "aliases": [
+          "Follow"
+        ],
+        "extensions": [
+          ".fol"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "markdown",
+        "aliases": [
+          "Markdown",
+          "markdown"
+        ],
+        "extensions": [
+          ".md"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "follow",
+        "scopeName": "source.follow",
+        "path": "./syntaxes/follow.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Follow",
+      "properties": {
+        "follow.executablePath": {
+          "type": "string",
+          "default": "server/build/server.js",
+          "description": "Path to the follow server."
+        },
+        "follow.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        },
+        "follow.enableWatchMarkdown": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable watching markdown file code block."
+        },
+        "follow.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.26.1",
+    "esbuild": "^0.19.2",
+    "prettier": "^3.0.2"
+  }
+}

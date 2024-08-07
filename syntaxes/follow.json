@@ -1,0 +1,26 @@
+{
+  "name": "Follow",
+  "patterns": [{ "include": "#comment" }, { "include": "#string" }],
+  "scopeName": "source.follow",
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "begin": "//",
+          "end": "$",
+          "name": "comment.line.follow"
+        },
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "name": "comment.block.follow"
+        }
+      ]
+    },
+    "string": {
+      "begin": "'",
+      "end": "'",
+      "name": "string.follow"
+    }
+  }
+}

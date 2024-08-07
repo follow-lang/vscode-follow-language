@@ -1,0 +1,29 @@
+{
+  "folders": [
+    {
+      "name": "root",
+      "path": ".."
+    },
+    {
+      "name": "server",
+      "path": "../server"
+    },
+    {
+      "name": "client",
+      "path": "../client"
+    },
+    {
+      "name": "parser",
+      "path": "../packages/parser"
+    },
+    {
+      "name": "service",
+      "path": "../packages/service"
+    }
+  ],
+  "settings": {
+    "mochaExplorer.require": "ts-node/register",
+    "mochaExplorer.files": "${workspaceFolder}/build/test/**/*.ts",
+    "mochaExplorer.watch": "${workspaceFolder}/**/*.js"
+  }
+}

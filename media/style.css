@@ -1,0 +1,25 @@
+.follow-keyword {
+  color: var(--color-prettylights-syntax-markup-heading, #569cd6);
+}
+.follow-comment {
+  color: var(--color-prettylights-syntax-entity-tag, #6a9955);
+}
+.follow-typename {
+  color: var(--color-prettylights-syntax-keyword, #ff5757);
+}
+.follow-argument {
+  color: var(--color-prettylights-syntax-markup-list, #9cdcfe);
+}
+.follow-termname {
+  color: var(--color-prettylights-syntax-variable, #ff8c00);
+}
+.follow-constname {
+  color: var(--color-prettylights-syntax-entity, #f9629f);
+}
+.follow-axiomname {
+  color: var(--color-prettylights-syntax-constant, #72a0c1);
+  font-weight: bold;
+}
+.follow-thmname {
+  color: var(--color-prettylights-syntax-constant, #72a0c1);
+}

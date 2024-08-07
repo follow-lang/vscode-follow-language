@@ -1,0 +1,15 @@
+.git/
+examples/
+.prettierrc.json
+.vscodeignore
+*.vsix
+packages/
+setmm/
+.vscode/**
+.vscode-test/**
+.gitignore
+package-lock.json
+pnpm-lock.yaml
+tsconfig.json
+README.md
+**/node_modules/**

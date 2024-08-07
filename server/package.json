@@ -1,0 +1,37 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "esbuild-base": "esbuild ./src/server.ts --bundle --outfile=build/server.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "watch": "tsc -b -w",
+    "test": "echo \"Error: no test specified\"",
+    "clean": "rimraf build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/charcodes": "^0.2.2",
+    "@types/crypto-js": "^4.2.2",
+    "@types/markdown-it": "^14.1.1",
+    "@types/node": "^20.5.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.3.3",
+    "esbuild": "^0.19.2",
+    "rimraf": "^5.0.1",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@types/vscode": "^1.80.0",
+    "charcodes": "^0.2.0",
+    "crypto-js": "^4.2.0",
+    "markdown-it": "^14.1.0",
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "vscode-uri": "^3.0.8"
+  }
+}
