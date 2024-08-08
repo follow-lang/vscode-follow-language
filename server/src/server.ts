@@ -99,7 +99,6 @@ connection.onInitialize((params: InitializeParams) => {
 
   if (params.workspaceFolders) {
     workspacePaths = params.workspaceFolders.map((wf) => URI.parse(wf.uri).fsPath);
-    console.log('Hello');
     for (const folder of workspacePaths) {
       initContentJsonFile(folder);
     }
@@ -193,7 +192,6 @@ async function readContentJsonFile(dir: string): Promise<string[] | null> {
   return null;
 }
 async function initContentJsonFile(folder: string) {
-  console.log('Hello');
   if (workspacePaths?.includes(folder)) {
     // 只有workspace的Json File才会读入
     const depFileList = await readContentJsonFile(folder);
@@ -1324,7 +1322,7 @@ function proofRelacementForSuggestion(proof: ProofOpCNode, suggestProof: ProofOp
   let rst = proof.root.content + '(' + suggestProof.children.map((child) => child.funContent).join(', ') + ')';
   let rstDocArray = [
     proof.root.content + '(' + suggestProof.children.map((child) => child.termContent).join(', ') + ') {',
-    ...suggestProof.targets.map((target) => '|- ' + target.termContent),
+    ...(suggestProof.currentTarget?.map((target) => '|- ' + target.termContent) || []),
     ...suggestProof.assumptions.map((assume) => '-| ' + assume.termContent),
   ];
 

@@ -317,6 +317,7 @@ export interface ProofOpCNode {
   useVirtual: boolean;
   diffError?: string[];
   virtualEdit?: TextEdit[];
+  currentTarget?: TermOpCNode[];
   isUseless?: boolean;
 }
 

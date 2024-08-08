@@ -428,6 +428,11 @@ export class CompilerWithImport {
         suggestions.push(suggestion);
         const result = suggestion.map((m) => {
           const proofOpCNode = this.replaceProofCNode(proof, m, blockArgDefMap, targetDiffMap);
+          const proofTargetSet = new Set(proofOpCNode.targets.map((t) => t.funContent));
+          const newTarget = currentTarget
+            .map((t) => this.replaceTermOpCNode(t, m))
+            .filter((t) => proofTargetSet.has(t.funContent));
+          proofOpCNode.currentTarget = newTarget;
           const virtualEdits: TextEdit[] = [];
           this.virtualMap.forEach((value, key) => {
             if (value.range.end.line < proofOpCNode.range.start.line) {
@@ -581,7 +586,6 @@ export class CompilerWithImport {
     const suggestions: Map<string, TermOpCNode>[] = [];
     const suggestionSet: Set<string> = new Set();
     // suggestion 的顺序和target的顺序相同体验更好
-    console.log('Hello');
     for (const target of targets) {
       const tmpSuggestions: Map<string, TermOpCNode>[] = [];
       for (const current of proof.targets) {
