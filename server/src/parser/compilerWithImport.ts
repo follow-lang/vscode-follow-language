@@ -429,9 +429,8 @@ export class CompilerWithImport {
         const result = suggestion.map((m) => {
           const proofOpCNode = this.replaceProofCNode(proof, m, blockArgDefMap, targetDiffMap);
           const proofTargetSet = new Set(proofOpCNode.targets.map((t) => t.funContent));
-          const newTarget = currentTarget
-            .map((t) => this.replaceTermOpCNode(t, m))
-            .filter((t) => proofTargetSet.has(t.funContent));
+          const newTarget1 = currentTarget.map((t) => this.replaceTermOpCNode(t, m));
+          const newTarget = newTarget1.filter((t) => proofTargetSet.has(t.funContent));
           proofOpCNode.currentTarget = newTarget;
           const virtualEdits: TextEdit[] = [];
           this.virtualMap.forEach((value, key) => {
@@ -785,41 +784,48 @@ export class CompilerWithImport {
       }
       return 1;
     });
-    const virtuals = [...this.getVirtualOfTermOpCNode2(current), ...this.getVirtualOfTermOpCNode2(target)];
+    const targetVirtuals = [...this.getVirtualOfTermOpCNode2(target)];
+    const virtuals = [...this.getVirtualOfTermOpCNode2(current), ...targetVirtuals];
+    const targetVirtualSet = new Set(targetVirtuals.map((t) => t.funContent));
+    // 没有在argMap，但是在eq中的变量进行替换
+    for (const vars of eq) {
+      const check = argValues.findIndex((v) => vars.has(v));
+      if (check >= 0) {
+        continue;
+      }
+      const varList = Array.from(vars.values()).sort((a, b) => {
+        if (targetVirtualSet.has(a)) {
+          if (targetVirtualSet.has(b)) {
+            return a.localeCompare(b);
+          } else {
+            return -1;
+          }
+        }
+        if (targetVirtualSet.has(b)) {
+          return 1;
+        }
+        return a.localeCompare(b);
+      });
+      const head = varList.at(0);
+      const headToken = virtuals.find((v) => v.funContent === head);
+      if (headToken) {
+        for (let i = 1; i < varList.length; i++) {
+          argMap.set(varList[i], headToken);
+        }
+      }
+    }
     // 在argMap 并且在 eq 中的变量进行统一替换
     for (const k of argValues) {
       const value = argMap.get(k);
-      const s = eq.find((s) => s.has(k));
       if (value) {
         const newOpCNode = this.replaceTermOpCNode(value, argMap);
+        const s = eq.find((s) => s.has(k));
         if (s) {
           for (const newK of s) {
             argMap.set(newK, newOpCNode);
           }
         } else {
           argMap.set(k, newOpCNode);
-        }
-      } else if (s) {
-        // 这里有bug，一定走不到，因为 k 一定在argMap中
-        const minS = Array.from(s.values()).sort()[0];
-        const virtual = virtuals.find((v) => v.funContent === minS);
-        if (virtual) {
-          for (const newK of s) {
-            argMap.set(newK, virtual);
-          }
-        }
-      }
-    }
-    // 没有在argMap，但是在eq中的变量进行替换
-    for (const vars of eq) {
-      const varList = Array.from(vars.values()).sort();
-      const head = varList.at(0);
-      if (head && !argMap.has(head)) {
-        const headToken = virtuals.find((v) => v.funContent === head);
-        if (headToken) {
-          for (let i = 1; i < varList.length; i++) {
-            argMap.set(varList[i], headToken);
-          }
         }
       }
     }
