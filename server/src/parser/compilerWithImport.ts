@@ -181,7 +181,7 @@ export class CompilerWithImport {
         this.compileAxiomBlock(node);
         return;
       case NodeTypes.THM:
-        this.compileThmBlock(node);
+        this.compileThmBlockV2(node);
         return;
     }
   }
@@ -313,6 +313,101 @@ export class CompilerWithImport {
     }
     return rstMap;
   }
+  private compileThmBlockV2(node: ThmASTNode) {
+    if (!this.checkNameDup(node.name)) {
+      return;
+    }
+    if (!this.checkParams(node.params)) {
+      return;
+    }
+    const argDefMap: Map<string, ParamPair> = new Map();
+    node.params.forEach((p) => {
+      argDefMap.set(p.name.content, p);
+    });
+
+    const targets: TermOpCNode[] = [];
+    for (const t of node.targets) {
+      const ct = this.compileTermOpNode0(t, argDefMap);
+      if (ct === undefined) {
+        // Parsing opNode failed.
+        return;
+      } else {
+        targets.push(ct);
+        ct.root.comment = ct.termContent;
+      }
+    }
+    const assumptions: TermOpCNode[] = [];
+    for (const a of node.assumptions) {
+      const ca = this.compileTermOpNode0(a, argDefMap);
+      if (ca === undefined) {
+        // Parsing opNode failed.
+        return;
+      } else {
+        assumptions.push(ca);
+        ca.root.comment = ca.termContent;
+      }
+    }
+
+    this.virtualIndex = 0;
+    this.virtualMap = new Map();
+    this.virtualUsedMap = new Map();
+
+    const proofs: ProofOpCNode[][] = []; // 每个op可能补全多个thm/axiom
+    const diffMap = this.getDiffMap(node.diffs);
+    const cNodeSuggestions: Suggestion[] = [];
+    for (const opNode of node.proof) {
+      const proofOpCNode = this.compileProofOpNode(opNode, argDefMap, diffMap);
+      if (proofOpCNode) {
+        proofs.push([proofOpCNode]);
+      } else {
+        const proofOpRootSuggestions = this.getProofOpRootSuggestions(opNode.root);
+        if (proofOpRootSuggestions.length > 0 && proofOpRootSuggestions.length < 100) {
+          // TODO： 如果足够精确，尝试compileProofOpNode
+          const currentProofs: ProofOpCNode[] = [];
+          for (const rootSuggestion of proofOpRootSuggestions) {
+            const newOpNode: OpAstNode = { ...opNode, root: { ...opNode.root, content: rootSuggestion.newText } };
+            const newProofOpCNode = this.compileProofOpNode(newOpNode, argDefMap, diffMap);
+            if (newProofOpCNode) {
+              currentProofs.push(newProofOpCNode);
+            }
+          }
+          proofs.push(currentProofs);
+        } else {
+          // 粗略补全
+          cNodeSuggestions.push(...proofOpRootSuggestions);
+        }
+      }
+    }
+    const { processes, suggestions, suggestionProof } = this.getProofProcessV2(
+      targets,
+      proofs,
+      assumptions,
+      argDefMap,
+      diffMap,
+    );
+    const thmCNode: ThmCNode = {
+      cnodetype: CNodeTypes.THM,
+      astNode: node,
+      assumptions: assumptions,
+      targets: targets,
+      diffArray: node.diffs.map((e) => e.map((e) => e.content)),
+      diffMap: diffMap,
+      proofs: proofs.map((proofList) => proofList[0]),
+      proofProcess: processes,
+      isValid: this.checkProofValidation(processes.at(-1)),
+      suggestions: suggestions,
+      suggestionProof: suggestionProof,
+      cNodeSuggestions: cNodeSuggestions,
+    };
+    this.pushCurrentCNodeList(thmCNode);
+    this.setCurrentCNodeMap(node.name.content, thmCNode);
+    if (!thmCNode.isValid) {
+      this.errors.push({
+        type: ErrorTypes.ThmWithoutValidProof,
+        token: node.name,
+      });
+    }
+  }
   private compileThmBlock(node: ThmASTNode) {
     if (!this.checkNameDup(node.name)) {
       return;
@@ -360,7 +455,8 @@ export class CompilerWithImport {
       if (proofOpCNode) {
         proofs.push(proofOpCNode);
       } else {
-        cNodeSuggestions.push(...this.getProofOpRootSuggestions(opNode.root));
+        const proofOpRootSuggestions = this.getProofOpRootSuggestions(opNode.root);
+        cNodeSuggestions.push(...proofOpRootSuggestions);
       }
     }
     const { processes, suggestions, suggestionProof } = this.getProofProcess(
@@ -401,6 +497,131 @@ export class CompilerWithImport {
       return true;
     }
     return false;
+  }
+  private getSuggestionInfo(
+    proof: ProofOpCNode,
+    currentTarget: TermOpCNode[],
+    assumptions: TermOpCNode[],
+    blockArgDefMap: Map<string, ParamPair>,
+    targetDiffMap: Map<string, Set<string>>,
+  ) {
+    proof.isUseless = true;
+    const suggestions = this.getSuggestions(currentTarget, proof, assumptions);
+    let result = suggestions.map((m) => {
+      const proofOpCNode = this.replaceProofCNode(proof, m, blockArgDefMap, targetDiffMap);
+      const proofTargetSet = new Set(proofOpCNode.targets.map((t) => t.funContent));
+      const newTarget1 = currentTarget.map((t) => this.replaceTermOpCNode(t, m));
+      const newTarget = newTarget1.filter((t) => proofTargetSet.has(t.funContent));
+      proofOpCNode.currentTarget = newTarget;
+      const virtualEdits: TextEdit[] = [];
+      this.virtualMap.forEach((value, key) => {
+        if (value.range.end.line < proofOpCNode.range.start.line) {
+          const virtualTarget = m.get(key);
+          if (virtualTarget && virtualTarget.funContent !== value.funContent) {
+            virtualEdits.push({
+              range: value.range,
+              newText: virtualTarget.funContent,
+              oldText: value.funContent,
+              newTermText: virtualTarget.termContent,
+            });
+            this.virtualUsedMap.get(key)?.forEach((cNode) => {
+              virtualEdits.push({
+                range: cNode.range,
+                newText: virtualTarget.funContent,
+                oldText: value.funContent,
+                newTermText: virtualTarget.termContent,
+              });
+            });
+          }
+        }
+      });
+      proofOpCNode.virtualEdit = virtualEdits;
+      return proofOpCNode;
+    });
+    // 过滤掉没有改变的suggestion
+    const suggestProofs = result.filter((newProofOp) => {
+      if (newProofOp.virtualEdit && newProofOp.virtualEdit.length > 0) {
+        return true;
+      }
+      for (let i = 0; i < newProofOp.children.length; i++) {
+        const child = proof.children[i];
+        const newChild = newProofOp.children[i];
+        if (child.funContent !== newChild.funContent) {
+          return true;
+        }
+      }
+      return false;
+    });
+    return { suggestions, suggestProofs };
+  }
+  private getProofProcessV2(
+    targets: TermOpCNode[],
+    proofs: ProofOpCNode[][],
+    assumptions: TermOpCNode[],
+    blockArgDefMap: Map<string, ParamPair>,
+    targetDiffMap: Map<string, Set<string>>,
+  ) {
+    const processes: TermOpCNode[][] = [];
+    const suggestions: Map<string, TermOpCNode>[][] = [];
+    const assumptionSet: Set<string> = new Set(assumptions.map((ass) => ass.funContent));
+    const suggestionProof: ProofOpCNode[][] = [];
+    let currentTarget = [...targets];
+    for (const proofList of proofs) {
+      if (proofList.length === 1) {
+        const proof = proofList[0];
+        // check target
+        const nextTarget = this.getNextProof0(currentTarget, proof, assumptionSet);
+        if (nextTarget === undefined) {
+          this.errors.push({
+            type: ErrorTypes.ProofOpUseless,
+            token: proof.root,
+          });
+          processes.push(currentTarget);
+          const suggestionInfo = this.getSuggestionInfo(
+            proof,
+            currentTarget,
+            assumptions,
+            blockArgDefMap,
+            targetDiffMap,
+          );
+          suggestions.push(suggestionInfo.suggestions);
+          // 过滤掉没有改变的suggestion
+          suggestionProof.push(suggestionInfo.suggestProofs);
+        } else {
+          processes.push(nextTarget);
+          currentTarget = nextTarget;
+          this.setProofComment(proof, nextTarget);
+          if (proof.useVirtual) {
+            const suggestion = this.getSuggestion2(proof);
+            suggestions.push([suggestion]);
+            suggestionProof.push([this.replaceProofCNode(proof, suggestion, blockArgDefMap, targetDiffMap)]);
+          } else {
+            suggestions.push([]);
+            suggestionProof.push([]);
+          }
+        }
+      } else if (proofList.length > 1) {
+        // proofList大于1，说明是需要补全的proofOp
+        processes.push(currentTarget);
+        const currentSuggestions: Map<string, TermOpCNode>[] = [];
+        const currentSuggestionProofs: ProofOpCNode[] = [];
+        for (const proof of proofList) {
+          const suggestionInfo = this.getSuggestionInfo(
+            proof,
+            currentTarget,
+            assumptions,
+            blockArgDefMap,
+            targetDiffMap,
+          );
+          currentSuggestionProofs.push(...suggestionInfo.suggestProofs);
+          currentSuggestions.push(...suggestionInfo.suggestions);
+        }
+        suggestions.push(currentSuggestions);
+        // 过滤掉没有改变的suggestion
+        suggestionProof.push(currentSuggestionProofs);
+      }
+    }
+    return { processes, suggestions, suggestionProof };
   }
   private getProofProcess(
     targets: TermOpCNode[],
@@ -875,11 +1096,14 @@ export class CompilerWithImport {
     }
     return undefined;
   }
-  private getProofOpRootSuggestions(token: Token): Suggestion[] {
+  private getProofOpRootSuggestions(token: Token, max_num: number = 1000): Suggestion[] {
     const suggestions: Suggestion[] = [];
     let content = token.content;
     if (content.at(-1) === '.') {
       content = content.slice(0, content.length - 1);
+    } else {
+      // 非 `.` 结尾的不提供suggestions，优化性能
+      return suggestions;
     }
     if (content.length >= 2) {
       for (const cNode of this.currentCNodeList) {
@@ -914,7 +1138,7 @@ export class CompilerWithImport {
         }
       }
     }
-    return suggestions.slice(0, 1000);
+    return suggestions.slice(0, max_num);
   }
   private compileProofOpNode(
     opNode: OpAstNode,
