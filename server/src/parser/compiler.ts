@@ -1037,7 +1037,7 @@ export class Compiler {
       targets,
       assumptions,
       diffs,
-      diffErrors,
+      diffError: diffErrors,
     };
     return newProof;
   }

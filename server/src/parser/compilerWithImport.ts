@@ -621,7 +621,10 @@ export class CompilerWithImport {
         suggestionProof.push(currentSuggestionProofs);
       }
     }
-    return { processes, suggestions, suggestionProof };
+    const newSuggestionProof = suggestionProof.map((proofs) => {
+      return proofs.filter((proof) => proof.diffError === undefined || proof.diffError.length === 0);
+    });
+    return { processes, suggestions, suggestionProof: newSuggestionProof };
   }
   private getProofProcess(
     targets: TermOpCNode[],
@@ -708,7 +711,10 @@ export class CompilerWithImport {
         }
       }
     }
-    return { processes, suggestions, suggestionProof };
+    const newSuggestionProof = suggestionProof.map((proofs) =>
+      proofs.filter((proof) => proof.diffError === undefined || proof.diffError),
+    );
+    return { processes, suggestions, suggestionProof: newSuggestionProof };
   }
   private setProofComment(proof: ProofOpCNode, currentTarget: TermOpCNode[]) {
     const newTarget = currentTarget.map((t) => '|- ' + t.termContent).join('\n');
@@ -1348,7 +1354,7 @@ export class CompilerWithImport {
       targets,
       assumptions,
       diffs,
-      diffErrors,
+      diffError: diffErrors,
     };
     return newProof;
   }
