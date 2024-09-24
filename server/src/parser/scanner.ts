@@ -64,7 +64,7 @@ export class Scanner {
         tokens.push(token);
         continue;
       }
-      if (charCodes.slash) {
+      if (code === charCodes.slash) {
         const nextCode = this.text.charCodeAt(this.idx + 1);
         if (nextCode === charCodes.slash) {
           // line comment
@@ -234,6 +234,7 @@ export class Scanner {
     const content = this.text.slice(startIdx, endIdx);
     const range = new RangeImpl(startPosition, endPosition);
     const token = new TokenImpl(TokenTypes.COMMENT, content, range);
+    console.log(token);
     return token;
   }
 }
