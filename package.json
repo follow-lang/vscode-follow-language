@@ -1,7 +1,7 @@
 {
   "name": "vscode-follow-language",
   "displayName": "Follow",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "publisher": "Follow",
   "description": "Language support for Follow",
   "icon": "./follow-icon-v2-128x128.png",
