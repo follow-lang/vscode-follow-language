@@ -67,6 +67,10 @@
           "function": "#72A0C1",
           "comment": "#6A9955"
         }
+      },
+      "[follow]": {
+        "editor.tabSize": 2,
+        "editor.suggest.showWords": false
       }
     },
     "languages": [

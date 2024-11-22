@@ -31,6 +31,7 @@ import {
 } from './types';
 
 import CryptoJS from 'crypto-js';
+import { convertToSubScript, convertToSuperScript } from './utils';
 
 export class CompilerWithImport {
   public cNodeListMap: Map<string, CNode[]> = new Map();
@@ -1700,13 +1701,30 @@ export class CompilerWithImport {
     return opCNode;
   }
   private getTermContent(term: TermCNode, children: TermOpCNode[]): string {
-    let s: string = '';
+    let words: string[] = [];
     for (let i = 0; i < term.content.length; i++) {
       const word = term.content[i];
       if (typeof word === 'string') {
-        s += word;
+        words.push(word);
       } else {
-        s += children[word].termContent;
+        words.push(children[word].termContent);
+      }
+    }
+    let s: string = '';
+    let mode: number = 0; // 0-none, 1-sub, 2-super
+    for (let word of words) {
+      if (word == '_') {
+        mode = 1;
+      } else if (word == '^') {
+        mode = 2;
+      } else if (mode == 1) {
+        s += convertToSubScript(word);
+        mode = 0;
+      } else if (mode == 2) {
+        s += convertToSuperScript(word);
+        mode = 0;
+      } else {
+        s += word;
       }
     }
     return s;
