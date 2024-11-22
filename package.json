@@ -4,7 +4,7 @@
   "version": "1.0.6",
   "publisher": "Follow",
   "description": "Language support for Follow",
-  "icon": "./follow-icon-128.png",
+  "icon": "./follow-icon-v2-128x128.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/follow-lang/vscode-follow-language"
